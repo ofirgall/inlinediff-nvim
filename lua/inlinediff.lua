@@ -5,6 +5,7 @@ M.ns = api.nvim_create_namespace('inlinediff')
 M.enabled = false
 
 M.default_config = {
+  debounce_time = 200,
   colors = {
     InlineDiffAddContext = "#182400",
     InlineDiffAddChange = "#395200",
@@ -275,9 +276,34 @@ function M.toggle()
   end
 end
 
+local debounce_timer = nil
+
 M.setup = function(opts)
   M.config = vim.tbl_deep_extend("force", M.default_config, opts or {})
   setup_highlights()
+
+  local grp = api.nvim_create_augroup("InlineDiffAuto", { clear = true })
+  
+  api.nvim_create_autocmd("InsertLeave", {
+    group = grp,
+    callback = function()
+       if not M.enabled or (M.config.debounce_time or 0) == 0 then return end
+       
+       if debounce_timer then
+          debounce_timer:stop()
+          if not debounce_timer:is_closing() then debounce_timer:close() end
+       end
+       
+       debounce_timer = vim.loop.new_timer()
+       debounce_timer:start(M.config.debounce_time, 0, vim.schedule_wrap(function()
+          if debounce_timer then
+              if not debounce_timer:is_closing() then debounce_timer:close() end
+              debounce_timer = nil
+          end
+          if M.enabled then M.refresh() end
+       end))
+    end
+  })
 end
 
 return M
