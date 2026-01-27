@@ -3,6 +3,7 @@ local api = vim.api
 
 M.ns = api.nvim_create_namespace('inlinediff')
 M.enabled = false
+M.last_diff_output = nil  -- Cache to prevent unnecessary redraws
 
 M.default_config = {
   debounce_time = 200,
@@ -278,9 +279,14 @@ end
 M.refresh = function()
    local bufnr = api.nvim_get_current_buf()
    if not M.enabled then return end
-   api.nvim_buf_clear_namespace(bufnr, M.ns, 0, -1)
    
    run_git_diff(bufnr, vim.schedule_wrap(function(output)
+      -- Only redraw if the diff has actually changed
+      if output == M.last_diff_output then return end
+      
+      M.last_diff_output = output
+      api.nvim_buf_clear_namespace(bufnr, M.ns, 0, -1)
+      
       if not output or output == '' then return end
       local hunks = parse_hunks(output)
       for _, h in ipairs(hunks) do render_hunk(bufnr, h) end
@@ -338,10 +344,12 @@ function M.toggle()
   M.setup(M.config) -- Reload highlights on toggle to ensure freshness
   if M.enabled then
     M.enabled = false
+    M.last_diff_output = nil  -- Clear cache on disable
     clear_autocmds()
     api.nvim_buf_clear_namespace(0, M.ns, 0, -1)
   else
     M.enabled = true
+    M.last_diff_output = nil  -- Clear cache on enable to force initial render
     setup_autocmds()
     M.refresh()
   end
