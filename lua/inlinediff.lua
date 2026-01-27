@@ -55,11 +55,33 @@ end
 local function run_git_diff(bufnr, cb)
   local path = api.nvim_buf_get_name(bufnr)
   if path == '' then return end
-  path = vim.fn.fnamemodify(path, ':p')
-  
-  local cmd = { 'git', 'diff', '--no-color', '--no-ext-diff', '-U3', '--', path }
-  vim.system(cmd, { text = true }, function(obj)
-     if obj.code == 0 then cb(obj.stdout) end
+
+  local fullpath = vim.fn.fnamemodify(path, ':p')
+  local dir = vim.fn.fnamemodify(fullpath, ':h')
+  local name = vim.fn.fnamemodify(fullpath, ':t')
+
+  -- Read buffer (unsaved) content
+  local buf_lines = api.nvim_buf_get_lines(bufnr, 0, -1, false)
+  local buf_content = table.concat(buf_lines, "\n")
+  if buf_content == '' or buf_content:sub(-1) ~= '\n' then buf_content = buf_content .. '\n' end
+
+  -- Try to read the index version of the file. If it fails (untracked/new file), treat index as empty.
+  local cmd = { 'git', 'show', ':./' .. name }
+  vim.system(cmd, { cwd = dir, text = true }, function(obj)
+    local index_content = ''
+    if obj and obj.code == 0 and obj.stdout then
+      index_content = obj.stdout
+    end
+
+    -- Produce a unified diff between index (old) and buffer (new)
+    local diff_out = vim.diff(index_content, buf_content, {
+      algorithm = 'minimal',
+      result_type = 'unified',
+      ctxlen = 3,
+      interhunkctxlen = 4,
+    })
+
+    if diff_out and diff_out ~= '' then cb(diff_out) else cb(nil) end
   end)
 end
 
