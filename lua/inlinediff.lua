@@ -358,6 +358,30 @@ end
 M.setup = function(opts)
   M.config = vim.tbl_deep_extend("force", M.default_config, opts or {})
   setup_highlights()
+
+  -- Create user command `:InlineDiff [toggle|refresh]`
+  pcall(function()
+    api.nvim_create_user_command('InlineDiff', function(cmdopts)
+      local arg = (cmdopts.args or ''):match("^%s*(%S*)") or ''
+      if arg == '' or arg == 'toggle' then
+        M.toggle()
+      elseif arg == 'refresh' then
+        M.refresh()
+      else
+        print('InlineDiff: unknown arg "' .. arg .. '". Use "toggle" or "refresh"')
+      end
+    end, {
+      nargs = '?',
+      complete = function(ArgLead, _, _)
+        local opts = { 'toggle', 'refresh' }
+        local res = {}
+        for _, v in ipairs(opts) do if v:sub(1, #ArgLead) == ArgLead then table.insert(res, v) end end
+        return res
+      end,
+      desc = 'InlineDiff commands: toggle or refresh',
+      -- force option not present in older neovim; using pcall wrapper to avoid errors
+    })
+  end)
 end
 
 return M
