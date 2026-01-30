@@ -11,6 +11,7 @@ Simplest Neovim inline diff view with character-level highlighting.
 <img width="1440" height="900" alt="Screenshot 2026-01-28 at 16 54 19" src="https://github.com/user-attachments/assets/b4bd0b1f-d079-4951-b58b-35c681fa628f" />
 
 ---
+
 This plugin is solely focused on providing a better inline Git diff view. It is meant to be used alongside your favorite Git plugin (for example, gitsigns). I created inlinediff-nvim because gitsigns lacked character-level highlighting and its inline decorations could disappear on cursor move.
 
 inspiration:
@@ -45,6 +46,8 @@ return {
 ```lua
 opts = {
     debounce_time = 200,
+	ignored_buftype = { "terminal", "nofile" },
+	ignored_filetype = { "TelescopePrompt", "NvimTree", "neo-tree" },
     colors = {
         -- context = dim background color; change = bright background color for changed text.
         InlineDiffAddContext = "#182400",
