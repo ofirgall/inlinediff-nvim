@@ -53,57 +53,57 @@ local function byte_map_for(s)
 	return map
 end
 
-	-- Lightweight buffer validity predicate used to avoid expensive work on
-	-- non-file-ish buffers (terminals, help, plugin prompts, unloaded buffers).
-	local function is_buffer_valid(bufnr)
-		if not api.nvim_buf_is_valid(bufnr) then
-			return false
-		end
+-- Lightweight buffer validity predicate used to avoid expensive work on
+-- non-file-ish buffers (terminals, help, plugin prompts, unloaded buffers).
+local function is_buffer_valid(bufnr)
+	if not api.nvim_buf_is_valid(bufnr) then
+		return false
+	end
 
-		if not api.nvim_buf_is_loaded(bufnr) then
-			return false
-		end
+	if not api.nvim_buf_is_loaded(bufnr) then
+		return false
+	end
 
-		-- Skip by buftype when non-empty (common special buffers). Also consult
-		-- user-supplied ignored_buftype for explicit matches.
-		local ok, buftype = pcall(api.nvim_buf_get_option, bufnr, 'buftype')
-		if ok and buftype and buftype ~= '' then
-			for _, v in ipairs(M.config.ignored_buftype or {}) do
-				if buftype == v then
-					return false
-				end
-			end
-			-- If buftype is non-empty treat as special and skip.
-			return false
-		end
-
-		-- Block common UI/plugin filetypes when listed in config
-		local ok2, ft = pcall(api.nvim_buf_get_option, bufnr, 'filetype')
-		if ok2 and ft and ft ~= '' then
-			for _, v in ipairs(M.config.ignored_filetype or {}) do
-				if ft == v then
-					return false
-				end
-			end
-		end
-
-		-- Prefer listed buffers; allow unnamed (new) buffers when listed and
-		-- modifiable (common for new unsaved buffers).
-		local ok3, bl = pcall(api.nvim_buf_get_option, bufnr, 'buflisted')
-		if not ok3 or not bl then
-			return false
-		end
-
-		local name = api.nvim_buf_get_name(bufnr)
-		if name == '' then
-			local ok4, mod = pcall(api.nvim_buf_get_option, bufnr, 'modifiable')
-			if not ok4 or not mod then
+	-- Skip by buftype when non-empty (common special buffers). Also consult
+	-- user-supplied ignored_buftype for explicit matches.
+	local ok, buftype = pcall(api.nvim_buf_get_option, bufnr, "buftype")
+	if ok and buftype and buftype ~= "" then
+		for _, v in ipairs(M.config.ignored_buftype or {}) do
+			if buftype == v then
 				return false
 			end
 		end
-
-		return true
+		-- If buftype is non-empty treat as special and skip.
+		return false
 	end
+
+	-- Block common UI/plugin filetypes when listed in config
+	local ok2, ft = pcall(api.nvim_buf_get_option, bufnr, "filetype")
+	if ok2 and ft and ft ~= "" then
+		for _, v in ipairs(M.config.ignored_filetype or {}) do
+			if ft == v then
+				return false
+			end
+		end
+	end
+
+	-- Prefer listed buffers; allow unnamed (new) buffers when listed and
+	-- modifiable (common for new unsaved buffers).
+	local ok3, bl = pcall(api.nvim_buf_get_option, bufnr, "buflisted")
+	if not ok3 or not bl then
+		return false
+	end
+
+	local name = api.nvim_buf_get_name(bufnr)
+	if name == "" then
+		local ok4, mod = pcall(api.nvim_buf_get_option, bufnr, "modifiable")
+		if not ok4 or not mod then
+			return false
+		end
+	end
+
+	return true
+end
 
 --------------------------------------------------------------------------------
 -- 2. GIT SOURCE
@@ -457,12 +457,16 @@ local function start_debounce_timer(ms, cb)
 		return
 	end
 	debounce_timer = vim.loop.new_timer()
-	debounce_timer:start(ms, 0, vim.schedule_wrap(function()
-		stop_debounce_timer()
-		if cb then
-			cb()
-		end
-	end))
+	debounce_timer:start(
+		ms,
+		0,
+		vim.schedule_wrap(function()
+			stop_debounce_timer()
+			if cb then
+				cb()
+			end
+		end)
+	)
 end
 
 local function setup_autocmds()
