@@ -407,27 +407,37 @@ local function setup_autocmds()
 	})
 end
 
-function M.toggle()
-	M.enabled = not M.enabled
-	clear_cache()
+function M.enable()
+	M.enabled = true
 
-	if M.enabled then
-		if vim.fn.hlexists("InlineDiffAddContext") == 0 then
-			setup_highlights()
+	clear_cache()
+	if vim.fn.hlexists("InlineDiffAddContext") == 0 then
+		setup_highlights()
+	end
+	setup_autocmds()
+	M.refresh()
+end
+
+function M.disable()
+	M.enabled = false
+
+	if augroup then
+		api.nvim_del_augroup_by_id(augroup)
+		augroup = nil
+	end
+	stop_timer()
+	for _, b in ipairs(api.nvim_list_bufs()) do
+		if api.nvim_buf_is_loaded(b) then
+			pcall(api.nvim_buf_clear_namespace, b, M.ns, 0, -1)
 		end
-		setup_autocmds()
-		M.refresh()
+	end
+end
+
+function M.toggle()
+	if not M.enabled then
+		M.enable()
 	else
-		if augroup then
-			api.nvim_del_augroup_by_id(augroup)
-			augroup = nil
-		end
-		stop_timer()
-		for _, b in ipairs(api.nvim_list_bufs()) do
-			if api.nvim_buf_is_loaded(b) then
-				pcall(api.nvim_buf_clear_namespace, b, M.ns, 0, -1)
-			end
-		end
+		M.disable()
 	end
 end
 
